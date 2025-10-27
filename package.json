@@ -10,17 +10,25 @@
     "preload",
     "tailwind"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KozlovDS/vite-plugin-fonts-auto.git"
+  },
+  "bugs": {
+    "url": "https://github.com/KozlovDS/vite-plugin-fonts-auto/issues"
+  },
+  "homepage": "https://github.com/KozlovDS/vite-plugin-fonts-auto#readme",
   "license": "MIT",
   "author": "kozlovv.ds <kozlovv.ds@ya.ru>",
   "type": "module",
   "main": "index.js",
+  "sideEffects": false,
   "peerDependencies": {
     "vite": "^5.0.0"
   },
   "dependencies": {
     "ttf2woff": "^2.0.0",
     "ttf2woff2": "^4.0.0",
-    "commander": "^11.0.0",
     "opentype.js": "^1.4.0",
     "cheerio": "^1.0.0"
   },
@@ -29,5 +37,18 @@
   },
   "engines": {
     "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "index.js",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "import": "./index.js"
+    }
   }
 }

@@ -20,11 +20,11 @@ export default function ViteFontsAutoPlugin(options = {}) {
     indexHtml = path.join(root, "index.html"),
     preload = true,
     includeCss = true,
-    generateTailwind = true, // Автоматически генерировать @theme в CSS (по дефолту true)
+    generateTailwind = false,
     clearCache = false, // Очистить кэш при запуске
     maxFileSize = 50 * 1024 * 1024, // Лимит размера (50MB)
     strict = false, // Throw ошибки вместо warn
-    logs = true, // Единственный параметр для логов (true - включить, false - выключить)
+    logs = false, // Единственный параметр для логов (true - включить, false - выключить)
   } = options;
 
   // Валидация sourceDir
@@ -33,7 +33,7 @@ export default function ViteFontsAutoPlugin(options = {}) {
       console.warn(
         `⚠️ Директория ${sourceDir} не существует. Плагин пропущен.`
       );
-    return { name: "vite-fonts-auto" };
+    return { name: "vite-plugin-fonts-auto" };
   }
 
   const relSrc = (filePath) =>
@@ -41,7 +41,7 @@ export default function ViteFontsAutoPlugin(options = {}) {
   const relDist = (filePath) => `assets/fonts/${path.basename(filePath)}`;
 
   return {
-    name: "vite-fonts-auto",
+    name: "vite-plugin-fonts-auto",
     buildStart() {
       try {
         const targetDestDir =
