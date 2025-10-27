@@ -1,0 +1,33 @@
+{
+  "name": "vite-plugin-fonts-auto",
+  "version": "1.0.0",
+  "description": "Плагин для Vite: автоматическая конвертация шрифтов в WOFF/WOFF2, добавление подключения в preload, css и Tailwind @theme",
+  "keywords": [
+    "vite",
+    "plugin",
+    "fonts",
+    "woff2",
+    "preload",
+    "tailwind"
+  ],
+  "license": "MIT",
+  "author": "kozlovv.ds <kozlovv.ds@ya.ru>",
+  "type": "module",
+  "main": "index.js",
+  "peerDependencies": {
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "ttf2woff": "^2.0.0",
+    "ttf2woff2": "^4.0.0",
+    "commander": "^11.0.0",
+    "opentype.js": "^1.4.0",
+    "cheerio": "^1.0.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
