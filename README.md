@@ -1,6 +1,6 @@
 # ⚡ vite-plugin-fonts-auto
 
-[![NPM VERSION](https://img.shields.io/npm/v/vite-plugin-fonts-auto?color=green&style=flat-square&label=NPM)](https://www.npmjs.com/package/vite-plugin-fonts-auto)
+[![NPM VERSION](https://img.shields.io/npm/v/vite-plugin-fonts-auto?color=gree&style=flat-square&label=NPM)](https://www.npmjs.com/package/vite-plugin-fonts-auto)
 [![DOWNLOADS](https://img.shields.io/npm/dm/vite-plugin-fonts-auto?color=informational&style=flat-square&label=Downloads)](https://www.npmjs.com/package/vite-plugin-fonts-auto)
 [![LICENSE](https://img.shields.io/npm/l/vite-plugin-fonts-auto?color=success&style=flat-square&label=LICENSE)](./LICENSE)
 
@@ -150,19 +150,19 @@ ViteFontsAutoPlugin({
 
 ## 🔧 Опции
 
-| Опция              | Тип     | По умолчанию                  | Описание                                   |
-| ------------------ | ------- | ----------------------------- | ------------------------------------------ |
-| `sourceDir`        | string  | `src/assets/fonts`            | Исходные шрифты `.ttf` / `.otf`            |
-| `destDir`          | string  | `public/fonts`                | Конвертированные WOFF / WOFF2              |
-| `cssFile`          | string  | `src/assets/styles/fonts.css` | Генерируемый CSS с `@font-face` и `@theme` |
-| `indexHtml`        | string  | `index.html`                  | HTML для добавления preload-тегов          |
-| `preload`          | boolean | `true`                        | Добавлять preload для WOFF2 в HTML         |
-| `includeCss`       | boolean | `true`                        | Генерировать CSS `@font-face`              |
-| `generateTailwind` | boolean | `false`                       | Создавать переменные `@theme` для Tailwind |
-| `clearCache`       | boolean | `false`                       | Очищать кэш при сборке                     |
-| `maxFileSize`      | number  | `52428800`                    | Максимальный размер шрифта в байтах (50mb) |
-| `strict`           | boolean | `false`                       | Бросать ошибки вместо логов                |
-| `logs`             | boolean | `false`                       | Логи работы плагина                        |
+| Опция              | Тип     | По умолчанию                     | Описание                                   |
+| ------------------ | ------- | ------------------------------   | ------------------------------------------ |
+| `sourceDir`        | string  | src/assets/fonts                 | Исходные шрифты `.ttf` / `.otf`            |
+| `destDir`          | string  | public/fonts                     | Конвертированные WOFF / WOFF2              |
+| `cssFile`          | string  | src/assets/<br>styles/fonts.css  | Генерируемый CSS с `@font-face` и `@theme` |
+| `indexHtml`        | string  | index.html                       | HTML для добавления preload-тегов          |
+| `preload`          | boolean | true                             | Добавлять preload для WOFF2 в HTML         |
+| `includeCss`       | boolean | true                             | Генерировать CSS `@font-face`              |
+| `generateTailwind` | boolean | false                            | Создавать переменные `@theme` для Tailwind |
+| `clearCache`       | boolean | false                            | Очищать кэш при сборке                     |
+| `maxFileSize`      | number  | 52428800                         | Максимальный размер шрифта в байтах (50mb) |
+| `strict`           | boolean | false                            | Бросать ошибки вместо логов                |
+| `logs`             | boolean | false                            | Логи работы плагина                        |
 
 ## 🔗 Репозиторий и баги
 
