@@ -4,27 +4,24 @@ import crypto from "crypto"; // Для MD5-хэша
 import ttf2woff from "ttf2woff";
 import ttf2woff2 from "ttf2woff2";
 import opentype from "opentype.js"; // Для парсинга и OTF-конвертации
-import { load } from "cheerio"; // Для DOM-парсинга preload
 
 export default function ViteFontsAutoPlugin(options = {}) {
   const root = process.cwd();
   const srcDir = path.join(root, "src");
-  const distDir = path.join(root, "dist");
-  const cacheFile = path.join(root, ".vite", "fonts-cache.json"); // Кэш-файл
+  const publicDir = path.join(root, "public");
 
   const {
     sourceDir = path.join(srcDir, "assets/fonts"),
-    destDir = path.join(srcDir, "assets/fonts/converted"),
-    buildDestDir = path.join(distDir, "assets/fonts"),
+    destDir = path.join(publicDir, "fonts"), // Всегда public/fonts
     cssFile = path.join(srcDir, "assets/styles/fonts.css"),
     indexHtml = path.join(root, "index.html"),
     preload = true,
     includeCss = true,
     generateTailwind = false,
-    clearCache = false, // Очистить кэш при запуске
+    clearCache = false,
     maxFileSize = 50 * 1024 * 1024, // Лимит размера (50MB)
-    strict = false, // Throw ошибки вместо warn
-    logs = false, // Единственный параметр для логов (true - включить, false - выключить)
+    strict = false,
+    logs = false,
   } = options;
 
   // Валидация sourceDir
@@ -38,14 +35,14 @@ export default function ViteFontsAutoPlugin(options = {}) {
 
   const relSrc = (filePath) =>
     `src/${path.relative(srcDir, filePath).replace(/\\/g, "/")}`;
-  const relDist = (filePath) => `assets/fonts/${path.basename(filePath)}`;
+  const relPublic = (filePath) => `/fonts/${path.basename(filePath)}`; // Путь для public/fonts
 
   return {
     name: "vite-plugin-fonts-auto",
     buildStart() {
       try {
-        const targetDestDir =
-          process.env.NODE_ENV === "production" ? buildDestDir : destDir;
+        // Используем одну директорию public/fonts для всех сред
+        const targetDestDir = destDir; // Всегда public/fonts
         if (!fs.existsSync(targetDestDir))
           fs.mkdirSync(targetDestDir, { recursive: true });
         if (includeCss && cssFile && !fs.existsSync(path.dirname(cssFile))) {
@@ -53,10 +50,11 @@ export default function ViteFontsAutoPlugin(options = {}) {
         }
 
         let cssContent = "";
-        let preloadTags = []; // Массив строк для Cheerio
-        const families = new Set(); // Уникальные семьи для @theme
+        let preloadTags = [];
+        const families = new Set();
 
         // Кэш: Загрузка
+        const cacheFile = path.join(root, ".vite", "fonts-cache.json");
         let cache = {};
         if (fs.existsSync(cacheFile)) {
           try {
@@ -82,23 +80,22 @@ export default function ViteFontsAutoPlugin(options = {}) {
         const getHash = (buffer) =>
           crypto.createHash("md5").update(buffer).digest("hex");
 
-        // Улучшенная функция: Детекция + опционально возвращает font для OTF-конвертации
+        // Детекция шрифта
         const detectFromFont = (inputBuffer, fileName) => {
           try {
-            // Фикс: Полный ArrayBuffer слайс для DataView-совместимости
             const arrayBuffer = inputBuffer.buffer.slice(
               inputBuffer.byteOffset,
               inputBuffer.byteOffset + inputBuffer.length
             );
-            const font = opentype.parse(arrayBuffer); // ← Теперь ArrayBuffer
+            const font = opentype.parse(arrayBuffer);
             if (!font.supported) throw new Error("Font not supported");
 
             const family =
               font.names.fontFamily.en ||
               path.parse(font.names.fullName.en || fileName).name;
             const weight = font.tables.os2?.usWeightClass || 400;
-            const style = font.tables.head.macStyle & 2 ? "italic" : "normal"; // Bit 1 для italic
-            const isVariable = !!font.tables.fvar; // Variable font detect
+            const style = font.tables.head.macStyle & 2 ? "italic" : "normal";
+            const isVariable = !!font.tables.fvar;
             const familyClean = family.replace(/[-_]/g, " ");
 
             if (logs)
@@ -117,7 +114,7 @@ export default function ViteFontsAutoPlugin(options = {}) {
           }
         };
 
-        // Старые функции (fallback)
+        // Fallback функции
         const detectWeight = (name) => {
           const lower = name.toLowerCase();
           if (lower.includes("thin")) return 100;
@@ -147,7 +144,6 @@ export default function ViteFontsAutoPlugin(options = {}) {
           .readdirSync(sourceDir)
           .filter((f) => /\.(ttf|otf)$/i.test(f));
 
-        // Если нет шрифтов — early return
         if (fontFiles.length === 0) {
           if (logs) console.log("ℹ️ Нет шрифтов для обработки.");
           return;
@@ -155,24 +151,23 @@ export default function ViteFontsAutoPlugin(options = {}) {
 
         fontFiles.forEach((file) => {
           try {
-            // Разделитель для каждого шрифта
             if (logs) console.log(`\n--- Обработка шрифта: ${file} ---`);
 
             const inputPath = path.join(sourceDir, file);
-            const stat = fs.statSync(inputPath); // Check размера
+            const stat = fs.statSync(inputPath);
             if (stat.size > maxFileSize) {
               const sizeMB = Math.round(stat.size / 1024 / 1024);
-              const msg = `Шрифт ${file} слишком большой (${sizeMB}MB), пропуск. Увеличьте maxFileSize в опциях.`;
+              const msg = `Шрифт ${file} слишком большой (${sizeMB}MB), пропуск.`;
               if (strict) throw new Error(msg);
               if (logs) console.warn(`⚠️ ${msg}`);
               if (logs) console.log("--- Конец шрифта (пропуск) ---");
-              return; // Skip всё для этого шрифта
+              return;
             }
 
             const fontName = path.parse(file).name.replace(/\s+/g, "");
             const woff2Path = path.join(targetDestDir, `${fontName}.woff2`);
             const woffPath = path.join(targetDestDir, `${fontName}.woff`);
-            const cacheKey = inputPath; // Ключ — полный путь
+            const cacheKey = inputPath;
 
             // Кэш-чек
             const cached = cache[cacheKey];
@@ -189,14 +184,9 @@ export default function ViteFontsAutoPlugin(options = {}) {
                   `💾 Кэш hit для ${file}: используем cached metadata.`
                 );
               const { family, weight, style, isVariable } = cached.metadata;
-              // CSS/Preload с cached
               if (includeCss && cssFile) {
-                const relWoff2 = path
-                  .relative(path.dirname(cssFile), woff2Path)
-                  .replace(/\\/g, "/");
-                const relWoff = path
-                  .relative(path.dirname(cssFile), woffPath)
-                  .replace(/\\/g, "/");
+                const relWoff2 = `/fonts/${path.basename(woff2Path)}`; // Путь для CSS
+                const relWoff = `/fonts/${path.basename(woffPath)}`;
                 let fontFace = `@font-face {
   font-family: "${family}";
   src: url("${relWoff2}") format("woff2"), url("${relWoff}") format("woff");
@@ -209,30 +199,29 @@ export default function ViteFontsAutoPlugin(options = {}) {
                 cssContent += fontFace + "\n";
               }
               if (preload && indexHtml) {
-                const relPath = relDist(woff2Path);
+                const relPath = relPublic(woff2Path); // /fonts/filename.woff2
                 preloadTags.push(
                   `<link rel="preload" href="${relPath}" as="font" type="font/woff2" crossorigin>`
                 );
               }
-              families.add(family); // Добавляем family для @theme
+              families.add(family);
               if (logs) console.log("--- Конец шрифта (кэш) ---");
-              return; // Skip остальное
+              return;
             }
 
-            // Детекция на input (раньше, для OTF и variable TTF)
+            // Детекция
             let detection = detectFromFont(input, fontName);
-            let ttfBuffer = input; // По умолчанию TTF-buffer = input
-            let { family, weight, style, isVariable } = detection || {}; // Из detection
+            let ttfBuffer = input;
+            let { family, weight, style, isVariable } = detection || {};
 
             if (!fs.existsSync(woff2Path) || !fs.existsSync(woffPath)) {
-              // OTF-конвертация (используем detection.font)
               if (
                 file.toLowerCase().endsWith(".otf") &&
                 detection &&
                 detection.font
               ) {
-                const arrayBuffer = detection.font.toArrayBuffer(); // OTF → TTF ArrayBuffer
-                ttfBuffer = Buffer.from(arrayBuffer); // → Buffer для woff
+                const arrayBuffer = detection.font.toArrayBuffer();
+                ttfBuffer = Buffer.from(arrayBuffer);
                 if (logs)
                   console.log(
                     `🔄 OTF → TTF-buffer для ${file}: ${input.length} → ${ttfBuffer.length} bytes`
@@ -244,7 +233,7 @@ export default function ViteFontsAutoPlugin(options = {}) {
                   );
               }
 
-              // Конвертация WOFF (используем ttfBuffer)
+              // Конвертация
               fs.writeFileSync(woff2Path, ttf2woff2(new Uint8Array(ttfBuffer)));
               fs.writeFileSync(
                 woffPath,
@@ -267,7 +256,7 @@ export default function ViteFontsAutoPlugin(options = {}) {
               console.log(`ℹ️ Шрифт "${file}" уже отформатирован, пропускаем.`);
             }
 
-            // Fallback детекция (если detection null, на ttfBuffer, но fallback non-variable)
+            // Fallback детекция
             if (!family) {
               weight = detectWeight(fontName);
               style = detectStyle(fontName);
@@ -284,7 +273,6 @@ export default function ViteFontsAutoPlugin(options = {}) {
                 );
             }
 
-            // Лог variable (после детекции)
             if (logs && isVariable)
               console.log(`📊 Variable font detected: axes preserved.`);
 
@@ -296,12 +284,8 @@ export default function ViteFontsAutoPlugin(options = {}) {
             if (logs) console.log(`💾 Кэш обновлён для ${file}`);
 
             if (includeCss && cssFile) {
-              const relWoff2 = path
-                .relative(path.dirname(cssFile), woff2Path)
-                .replace(/\\/g, "/");
-              const relWoff = path
-                .relative(path.dirname(cssFile), woffPath)
-                .replace(/\\/g, "/");
+              const relWoff2 = `/fonts/${path.basename(woff2Path)}`; // Путь для CSS
+              const relWoff = `/fonts/${path.basename(woffPath)}`;
               let fontFace = `@font-face {
   font-family: "${family}";
   src: url("${relWoff2}") format("woff2"), url("${relWoff}") format("woff");
@@ -315,16 +299,14 @@ export default function ViteFontsAutoPlugin(options = {}) {
             }
 
             if (preload && indexHtml) {
-              const relPath = relDist(woff2Path);
+              const relPath = relPublic(woff2Path); // /fonts/filename.woff2
               preloadTags.push(
                 `<link rel="preload" href="${relPath}" as="font" type="font/woff2" crossorigin>`
               );
             }
 
-            families.add(family); // Добавляем family для @theme
-
-            // Разделитель в конце шрифта
-            if (logs) console.log("--- Конец шrifта ---");
+            families.add(family);
+            if (logs) console.log("--- Конец шрифта ---");
           } catch (err) {
             const msg = `Ошибка при обработке шрифта ${file}: ${err.message}`;
             if (strict) throw new Error(msg);
@@ -333,7 +315,6 @@ export default function ViteFontsAutoPlugin(options = {}) {
           }
         });
 
-        // Глобальный разделитель после всех шрифтов
         if (logs) console.log("\n=== Обработка шрифтов завершена ===");
 
         // Кэш: Сохранение
@@ -354,15 +335,14 @@ export default function ViteFontsAutoPlugin(options = {}) {
 
         if (includeCss && cssFile) {
           try {
-            // Автоматическая генерация @theme в fonts.css (если generateTailwind true)
             if (generateTailwind && families.size > 0) {
-              if (cssContent.trim()) cssContent += "\n\n"; // Разделитель перед @theme
+              if (cssContent.trim()) cssContent += "\n\n";
               cssContent += "@theme {\n";
               Array.from(families).forEach((family) => {
                 const key = family
                   .toLowerCase()
                   .replace(/\s+/g, "-")
-                  .replace(/[^a-z0-9-]/g, ""); // Kebab-case
+                  .replace(/[^a-z0-9-]/g, "");
                 cssContent += `  --font-${key}: "${family}", sans-serif;\n`;
               });
               cssContent += "}\n";
@@ -383,55 +363,56 @@ export default function ViteFontsAutoPlugin(options = {}) {
           }
         }
 
-        // Preload с Cheerio (с фиксом форматирования)
         if (preload && indexHtml && fs.existsSync(indexHtml)) {
           try {
             let html = fs.readFileSync(indexHtml, "utf8");
             let added = 0;
-            const $ = load(html, { xmlMode: false }); // Стандартный режим
-            preloadTags.forEach((tagStr) => {
-              const $link = load(tagStr)("link");
-              const href = $link.attr("href");
-              const exists =
-                $(`head link[rel="preload"][as="font"][href="${href}"]`)
-                  .length > 0;
-              if (!exists) {
-                $("head").append($link);
-                added++;
-              }
-            });
-            html = $.html(); // Сериализуем
 
-            // Фикс: Форматирование preload-тегов с переносами
-            if (added > 0) {
-              // Найти <head>...</head>, вставить \n\t перед каждым preload <link>
-              html = html.replace(
-                /<head[^>]*>(.*?)<\/head>/gis,
-                (match, headContent) => {
-                  const formattedHead = headContent.replace(
-                    /(<link[^>]*rel="preload"[^>]*>)/g,
-                    "\n\t$1"
-                  );
-                  return `<head${
-                    match.match(/<head([^>]*)>/)[1] || ""
-                  }>${formattedHead}\n</head>`;
+            // Собираем уникальные preload-теги, которых нет в HTML
+            const existingHrefs = new Set();
+            // Извлекаем все href из существующих preload font тегов
+            html.replace(/<link[^>]+href="([^"]+)"[^>]*>/gi, (match, href) => {
+              if (
+                html.includes('rel="preload"') &&
+                html.includes('as="font"') &&
+                match.includes(href)
+              ) {
+                existingHrefs.add(href);
+              }
+              return match;
+            });
+
+            const uniqueNewTags = preloadTags.filter((tag) => {
+              const hrefMatch = tag.match(/href="([^"]+)"/);
+              if (hrefMatch) {
+                const href = hrefMatch[1];
+                if (!existingHrefs.has(href)) {
+                  existingHrefs.add(href);
+                  added++;
+                  return true;
                 }
-              );
+              }
+              return false;
+            });
+
+            if (added > 0) {
+              // Формируем вставку с отступами (предполагаем табы в head)
+              const insertion =
+                uniqueNewTags.map((tag) => `\t${tag}`).join("\n") + "\n";
+
+              // Вставляем перед </head>, сохраняя оригинальное форматирование
+              html = html.replace(/<\/head\s*>/i, insertion + "$&");
+
+              fs.writeFileSync(indexHtml, html, "utf8");
               if (logs)
                 console.log(
-                  `🔍 Cheerio: добавлено ${added} уникальных preload-тегов с форматированием`
+                  `✅ Preload обновлён в index.html (добавлено ${added} уникальных)`
                 );
-            }
-
-            fs.writeFileSync(indexHtml, html, "utf8");
-            if (logs && added > 0)
-              console.log(
-                `✅ Preload обновлён в index.html (добавлено ${added} уникальных)`
-              );
-            else if (logs && added === 0)
+            } else if (logs) {
               console.log(
                 "ℹ️ Все preload-теги уже присутствуют, пропускаем вставку."
               );
+            }
           } catch (preloadErr) {
             const msg = `Ошибка preload: ${preloadErr.message}`;
             if (strict) throw new Error(msg);

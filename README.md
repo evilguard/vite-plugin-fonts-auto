@@ -1,5 +1,9 @@
 # ⚡ vite-plugin-fonts-auto
 
+[![NPM VERSION](https://img.shields.io/npm/v/vite-plugin-fonts-auto?color=green&style=flat-square&label=NPM)](https://www.npmjs.com/package/vite-plugin-fonts-auto)
+[![DOWNLOADS](https://img.shields.io/npm/dm/vite-plugin-fonts-auto?color=informational&style=flat-square&label=Downloads)](https://www.npmjs.com/package/vite-plugin-fonts-auto)
+[![LICENSE](https://img.shields.io/npm/l/vite-plugin-fonts-auto?color=success&style=flat-square&label=LICENSE)](./LICENSE)
+
 Vite Fonts Auto Plugin — это плагин для Vite, который автоматически обрабатывает шрифты в вашем проекте. Он конвертирует файлы шрифтов из форматов `TTF/OTF` в современные `WOFF/WOFF2`, генерирует CSS-правила `@font-face`, добавляет теги `<link rel="preload">` в `index.html` для быстрой загрузки, поддерживает `variable fonts` и генерирует `Tailwind CSS` `@theme` для кастомных семейств шрифтов.
 
 Плагин работает на этапе `buildStart`, использует кэширование для ускорения повторных сборок и минимизирует ручную работу с шрифтами. Идеально подходит для проектов на Vite, где нужно оптимизировать веб-шрифты без лишних инструментов.
@@ -56,7 +60,7 @@ export default defineConfig({
 
 Плагин автоматически:
 
-- Конвертирует их в src/assets/fonts/converted (dev) или dist/assets (prod).
+- Конвертирует их в public/fonts
 - Создаст/обновит src/assets/styles/fonts.css с @font-face.
 - Добавит preload-теги в index.html.
 - Сгенерирует кэш в .vite/fonts-cache.json.
@@ -79,13 +83,15 @@ pnpm dev
 После выполнения команды
 
 ```css
+public/
+ │── fonts/
+ │   ├── Roboto-Regular.woff
+ │   └── Roboto-Regular.woff2
 src/
  ├── assets/
  │   ├── fonts/
  │   │   ├── Roboto-Regular.ttf
- │   │   └── converted/
- │   │        ├── Roboto-Regular.woff
- │   │        └── Roboto-Regular.woff2
+ │   │
  │   └── styles/
  │       └── fonts.css
  │
@@ -95,10 +101,10 @@ src/
 
 #### 4. Импорт CSS в приложение
 
-В вашем основном `CSS/SCSS` (например, `src/main.css`) в начало файла импортируйте сгенерированный `fonts.css`:
+В вашем основном `CSS/SCSS` (в нашем примере это `/style.css`) в начало файла импортируйте сгенерированный `fonts.css`:
 
 ```css
-@import "assets/styles/fonts.css";
+@import "src/assets/styles/fonts.css";
 ```
 
 #### 5. Готово! Можно пользоваться шрифтами.
@@ -147,7 +153,7 @@ ViteFontsAutoPlugin({
 | Опция              | Тип     | По умолчанию                  | Описание                                   |
 | ------------------ | ------- | ----------------------------- | ------------------------------------------ |
 | `sourceDir`        | string  | `src/assets/fonts`            | Исходные шрифты `.ttf` / `.otf`            |
-| `destDir`          | string  | `src/assets/fonts/converted`  | Конвертированные WOFF / WOFF2              |
+| `destDir`          | string  | `public/fonts`                | Конвертированные WOFF / WOFF2              |
 | `cssFile`          | string  | `src/assets/styles/fonts.css` | Генерируемый CSS с `@font-face` и `@theme` |
 | `indexHtml`        | string  | `index.html`                  | HTML для добавления preload-тегов          |
 | `preload`          | boolean | `true`                        | Добавлять preload для WOFF2 в HTML         |
@@ -162,7 +168,18 @@ ViteFontsAutoPlugin({
 
 - GitHub: https://github.com/KozlovDS/vite-plugin-fonts-auto
 - Issues: https://github.com/KozlovDS/vite-plugin-fonts-auto/issues
+- Npmjs: https://www.npmjs.com/package/vite-plugin-fonts-auto
 
 ## 📝 Лицензия
 
 MIT License © 2025 kozlovv.ds@ya.ru
+
+---
+
+# 💖 Поддержать проект
+
+Если плагин оказался полезен — вы можете поддержать разработку, чтобы я продолжал развивать его дальше 🙌
+
+[![ЮMoney](https://img.shields.io/badge/ЮMoney-6366F1?style=for-the-badge&logo=yoomoney&logoColor=white)](https://yoomoney.ru/to/4100117284040078)
+
+Спасибо за любую поддержку ❤️
