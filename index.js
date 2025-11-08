@@ -37,6 +37,42 @@ export default function ViteFontsAutoPlugin(options = {}) {
     `src/${path.relative(srcDir, filePath).replace(/\\/g, "/")}`;
   const relPublic = (filePath) => `/fonts/${path.basename(filePath)}`; // Путь для public/fonts
 
+  // Функция для очистки имени семейства шрифта (удаление суффиксов веса/стиля)
+  const cleanFamily = (name) => {
+    const suffixes = [
+      "Regular",
+      "Bold",
+      "Italic",
+      "Light",
+      "Medium",
+      "SemiBold",
+      "ExtraBold",
+      "Black",
+      "Heavy",
+    ];
+    let cleaned = name;
+    // Удаление суффикса с пробелом в конце
+    cleaned = cleaned.replace(
+      new RegExp(`\\s+(?:${suffixes.join("|")})$`, "i"),
+      ""
+    );
+    // Удаление суффикса с - или _ и остатком
+    cleaned = cleaned.replace(
+      new RegExp(`[-_](?:${suffixes.join("|")}).*$`, "i"),
+      ""
+    );
+    // Удаление суффикса без разделителя в конце
+    cleaned = cleaned.replace(
+      new RegExp(`(?:${suffixes.join("|")})$`, "i"),
+      ""
+    );
+    // Замена -_ на пробел
+    cleaned = cleaned.replace(/[-_]/g, " ");
+    // Нормализация пробелов
+    cleaned = cleaned.replace(/\s+/g, " ").trim();
+    return cleaned;
+  };
+
   return {
     name: "vite-plugin-fonts-auto",
     buildStart() {
@@ -90,22 +126,23 @@ export default function ViteFontsAutoPlugin(options = {}) {
             const font = opentype.parse(arrayBuffer);
             if (!font.supported) throw new Error("Font not supported");
 
-            const family =
+            let family =
               font.names.fontFamily.en ||
               path.parse(font.names.fullName.en || fileName).name;
+            // Очистка имени семейства для единообразия
+            family = cleanFamily(family);
             const weight = font.tables.os2?.usWeightClass || 400;
             const style = font.tables.head.macStyle & 2 ? "italic" : "normal";
             const isVariable = !!font.tables.fvar;
-            const familyClean = family.replace(/[-_]/g, " ");
 
             if (logs)
               console.log(
-                `📊 Детекция из метаданных: family="${familyClean}", weight=${weight}, style=${style}${
+                `📊 Детекция из метаданных: family="${family}", weight=${weight}, style=${style}${
                   isVariable ? ", variable=true" : ""
                 }`
               );
 
-            return { family: familyClean, weight, style, isVariable, font };
+            return { family, weight, style, isVariable, font };
           } catch (err) {
             const msg = `Парсинг метаданных failed для ${fileName}: ${err.message}`;
             if (strict) throw new Error(msg);
@@ -256,16 +293,11 @@ export default function ViteFontsAutoPlugin(options = {}) {
               console.log(`ℹ️ Шрифт "${file}" уже отформатирован, пропускаем.`);
             }
 
-            // Fallback детекция
+            // Fallback детекция (с использованием cleanFamily для единообразия)
             if (!family) {
               weight = detectWeight(fontName);
               style = detectStyle(fontName);
-              family = fontName
-                .replace(
-                  /[-_](Regular|Bold|Italic|Light|Medium|SemiBold|ExtraBold|Black|Heavy).*/i,
-                  ""
-                )
-                .replace(/[-_]/g, " ");
+              family = cleanFamily(fontName);
               isVariable = false;
               if (logs)
                 console.log(
@@ -337,6 +369,11 @@ export default function ViteFontsAutoPlugin(options = {}) {
           try {
             if (generateTailwind && families.size > 0) {
               if (cssContent.trim()) cssContent += "\n\n";
+              const defaultFamily = Array.from(families)[0];
+              const defaultKey = defaultFamily
+                .toLowerCase()
+                .replace(/\s+/g, "-")
+                .replace(/[^a-z0-9-]/g, "");
               cssContent += "@theme {\n";
               Array.from(families).forEach((family) => {
                 const key = family
@@ -346,11 +383,21 @@ export default function ViteFontsAutoPlugin(options = {}) {
                 cssContent += `  --font-${key}: "${family}", sans-serif;\n`;
               });
               cssContent += "}\n";
+
+              // Установка шрифта по умолчанию для Tailwind
+              cssContent += "\n\n@layer base {\n";
+              cssContent += `  body {\n`;
+              cssContent += `    font-family: var(--font-${defaultKey});\n`;
+              cssContent += "  }\n";
+              cssContent += "}\n";
+
               if (logs)
                 console.log(
                   `✅ @theme добавлен в ${relSrc(
                     cssFile
-                  )} (семейства: ${Array.from(families).join(", ")})`
+                  )} (семейства: ${Array.from(families).join(
+                    ", "
+                  )}), default font var: --font-${defaultKey}`
                 );
             }
 
