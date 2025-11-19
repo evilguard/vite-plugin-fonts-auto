@@ -399,6 +399,65 @@ export default function ViteFontsAutoPlugin(options = {}) {
                     ", "
                   )}), default font var: --font-${defaultKey}`
                 );
+            } else if (families.size > 0) {
+              // Если не Tailwind, обновляем variables.css или variables.scss
+              let variablesFile = path.join(
+                srcDir,
+                "assets/styles/variables.css"
+              );
+              let isScss = false;
+
+              // Проверяем, существует ли .scss версия
+              const scssPath = variablesFile.replace(/\.css$/, ".scss");
+              if (fs.existsSync(scssPath)) {
+                variablesFile = scssPath;
+                isScss = true;
+              } else if (!fs.existsSync(variablesFile)) {
+                // Если ни один не существует, создаём .css по умолчанию
+                fs.mkdirSync(path.dirname(variablesFile), { recursive: true });
+                fs.writeFileSync(variablesFile, ":root {\n\n}\n"); // Начальный шаблон для CSS
+              }
+
+              const defaultFamily = Array.from(families)[0];
+              const fontValue = `"${defaultFamily}", sans-serif`;
+              let variablesContent = fs.readFileSync(variablesFile, "utf8");
+
+              if (isScss) {
+                // Для SCSS: ищем $fontFamily и заменяем или добавляем в начало
+                const varRegex = /\$fontFamily\s*:\s*[^;]+;/g;
+                if (varRegex.test(variablesContent)) {
+                  variablesContent = variablesContent.replace(
+                    varRegex,
+                    `$fontFamily: ${fontValue};`
+                  );
+                } else {
+                  variablesContent =
+                    `$fontFamily: ${fontValue};\n` + variablesContent;
+                }
+              } else {
+                // Для CSS: ищем --fontFamily в :root и заменяем или добавляем в начало :root
+                const varRegex = /--fontFamily\s*:\s*[^;]+;/g;
+                if (varRegex.test(variablesContent)) {
+                  variablesContent = variablesContent.replace(
+                    varRegex,
+                    `--fontFamily: ${fontValue};`
+                  );
+                } else {
+                  // Добавляем в начало :root
+                  variablesContent = variablesContent.replace(
+                    /:root\s*\{([^}]*)\}/,
+                    `:root {\n  --fontFamily: ${fontValue};$1\n}`
+                  );
+                }
+              }
+
+              fs.writeFileSync(variablesFile, variablesContent.trim());
+              if (logs)
+                console.log(
+                  `✅ Переменная fontFamily обновлена в ${relSrc(
+                    variablesFile
+                  )} (значение: ${fontValue})`
+                );
             }
 
             fs.writeFileSync(cssFile, cssContent.trim());
